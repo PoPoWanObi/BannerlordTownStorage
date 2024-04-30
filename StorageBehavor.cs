@@ -20,12 +20,12 @@ namespace Storage
 
         public override void RegisterEvents()
         {
-            CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this, OnSessionLaunched);
+            CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this, new Action<CampaignGameStarter>(this.OnSessionLaunched));
         }
 
         public override void SyncData(IDataStore dataStore)
         {
-            dataStore.SyncData("StorageRoster", ref Roster);
+            dataStore.SyncData<ItemRoster>("StorageRoster", ref this.Roster);
         }
 
         public void OnSessionLaunched(CampaignGameStarter campaignGameStarter)
@@ -35,21 +35,18 @@ namespace Storage
 
         protected void AddGameMenus(CampaignGameStarter campaignGameStarter)
         {
-            campaignGameStarter.AddGameMenuOption("town", "player_town_storage", "Enter Storage", new GameMenuOption.OnConditionDelegate((args) =>
+            campaignGameStarter.AddGameMenuOption("town", "player_town_storage", "Enter Storage", delegate (MenuCallbackArgs args)
             {
-                Settlement settlement = Settlement.CurrentSettlement;
-                bool isAtWar = settlement?.OwnerClan.IsAtWarWith(Hero.MainHero.MapFaction) ?? false;
-                args.Tooltip = (isAtWar) ? new TextObject("You are currently in war with this faction and can't access the storage.") : new TextObject("");
-                args.IsEnabled = !isAtWar;
+                Settlement currentSettlement = Settlement.CurrentSettlement;
+                bool flag = currentSettlement != null && currentSettlement.OwnerClan.IsAtWarWith(Hero.MainHero.MapFaction);
+                args.Tooltip = (flag ? new TextObject("You are currently in war with this faction and can't access the storage.", null) : new TextObject("", null));
+                args.IsEnabled = !flag;
                 args.optionLeaveType = GameMenuOption.LeaveType.Trade;
                 return true;
-            }), new GameMenuOption.OnConsequenceDelegate((args) =>
+            }, delegate (MenuCallbackArgs args)
             {
-                //roster.Add(new ItemRosterElement(Items.All.FirstOrDefault(), 20));
-                InventoryManager.OpenScreenAsStash(Roster);
-            }), false, 2, true);
+                InventoryManager.OpenScreenAsStash(this.Roster);
+            }, false, 2, true, null);
         }
-
-
     }
 }
